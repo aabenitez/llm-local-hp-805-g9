@@ -90,6 +90,7 @@ tabla de más abajo corresponden a la versión indicada.
 | `qwen.sh`, `gptoss.sh` | Scripts anteriores que levantan un solo modelo. Quedaron reemplazados por `modelos.sh` |
 | `benchmarks/benchmarks.json` | Resultados de `llama-bench` de todos los modelos medidos |
 | `index.html` | Página con la tabla y los gráficos de los benchmarks (GitHub Pages) |
+| `docs/selector-de-modelos.png` | Captura de la interfaz de chat con el selector de modelos |
 | `README.md` | Este documento |
 
 Los modelos no están en esta carpeta. Se guardan en la caché de Hugging Face:
@@ -225,6 +226,11 @@ Estos dos archivos no se probaron en Windows.
 ## La interfaz de chat
 
 `http://127.0.0.1:8080`, con `modelos.sh` corriendo.
+
+![Selector de modelos en la interfaz de chat de llama.cpp, con gpt-oss-20b cargado y el resto de los modelos locales disponibles](docs/selector-de-modelos.png)
+
+*El selector de modelos abierto: arriba el modelo cargado (punto verde) y debajo
+los demás modelos locales, listos para cargarse con un clic.*
 
 - **Cambiar de modelo**: selector junto al cuadro de texto. La primera respuesta
   tarda 10–30 segundos porque tiene que cargarlo.

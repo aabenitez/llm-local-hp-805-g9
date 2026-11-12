@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Benchmarks de LLM local · HP Elite SFF 805 G9</title>
+<meta name="description" content="Velocidad de modelos de lenguaje locales con llama.cpp y Vulkan en una Radeon 780M integrada.">
+<style>
+  :root {
+    --bg: #f7f6f2; --panel: #ffffff; --fg: #1d1c1a; --muted: #6a675f; --line: #e2dfd6;
+    --grid: #ebe8df; --ok: #2f7d4f; --warn: #a9690a; --bad: #b83a3a; --pop: #ffffff;
+    --shadow: 0 6px 24px rgba(0,0,0,.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --panel: #1f1f1c; --fg: #ecebe6; --muted: #a09d94; --line: #33322e;
+      --grid: #2a2926; --ok: #6cc08b; --warn: #e0a84a; --bad: #ef7f7f; --pop: #2a2a26;
+      --shadow: 0 6px 24px rgba(0,0,0,.5);
+    }
+  }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin: 0; background: var(--bg); color: var(--fg);
+    font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  main { max-width: 1080px; margin: 0 auto; padding: 32px 16px 56px; display: flex; flex-direction: column; gap: 24px; }
+  h1 { font: 400 clamp(1.7rem, 4vw, 2.3rem)/1.15 Georgia, "Times New Roman", serif; margin: 0; letter-spacing: -.01em; }
+  h2 { font-size: 1.05rem; font-weight: 600; margin: 0 0 4px; }
+  p { margin: 0; }
+  a { color: inherit; }
+  .take { margin-top: 12px; max-width: 62em; }
+  .take b, .note b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 16px 0 0; padding: 0; list-style: none; }
+  .chips li { font-size: .8rem; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 2px 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+  .sub { font-size: .85rem; color: var(--muted); margin: 0 0 14px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+  .scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: .93rem; }
+  th, td { padding: 7px 10px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+  th { font-size: .78rem; color: var(--muted); font-weight: 600; vertical-align: bottom; }
+  th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+  tbody tr:last-child td { border-bottom: 0; }
+  td.ok { color: var(--ok); font-weight: 600; } td.warn { color: var(--warn); } td.bad { color: var(--bad); }
+  td .dot { display: inline-block; width: 9px; height: 9px; border-radius: 2px; margin-right: 8px; vertical-align: baseline; }
+  .legend-help { font-size: .85rem; color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 8px; margin: 8px 0 0; padding: 0; list-style: none; }
+  .legend button { font: inherit; font-size: .85rem; color: var(--fg); background: var(--panel); border: 1px solid var(--line);
+    border-radius: 999px; padding: 4px 12px 4px 8px; cursor: pointer; display: flex; align-items: center; gap: 7px; }
+  .legend button:focus-visible { outline: 2px solid var(--muted); outline-offset: 2px; }
+  .legend button[aria-pressed=false] { opacity: .45; text-decoration: line-through; }
+  .legend svg { flex: none; }
+  .chart { position: relative; min-height: 280px; }
+  .chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .chart text { fill: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+  .chart .gridline { stroke: var(--grid); }
+  .tip { position: absolute; pointer-events: none; background: var(--pop); border: 1px solid var(--line); box-shadow: var(--shadow);
+    border-radius: 8px; padding: 6px 10px; font-size: .8rem; white-space: nowrap; z-index: 2; }
+  .tip .v { font-weight: 600; font-variant-numeric: tabular-nums; } .tip .m { color: var(--muted); }
+  details { font-size: .88rem; color: var(--muted); }
+  details summary { cursor: pointer; font-weight: 600; }
+  details p { margin-top: 8px; max-width: 70em; }
+  code { font-size: .92em; }
+  footer { font-size: .85rem; color: var(--muted); }
+  .error { color: var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Benchmarks de LLM local</h1>
+    <p class="take" id="take">Cargando resultados…</p>
+    <ul class="chips">
+      <li>HP Elite SFF 805 G9</li>
+      <li>Ryzen 7 8700G</li>
+      <li>iGPU Radeon 780M · Vulkan (RADV)</li>
+      <li>32 GB DDR5-5200 · un solo canal</li>
+      <li>GTT 24 GB</li>
+      <li>llama.cpp 2e325dcd5 · <code>llama-bench</code></li>
+      <li id="fechas">noviembre de 2026</li>
+    </ul>
+  </header>
+
+  <section class="card">
+    <h2>Resumen por modelo</h2>
+    <p class="sub">Tokens por segundo con flash attention activado. tg = generación de respuesta (128 tokens), pp = lectura del prompt (512 tokens), medidos con el contexto ya ocupado por 0, 4k o 16k tokens. En verde, el mejor de cada columna.</p>
+    <div class="scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Modelo</th><th>Cuantización</th><th>Tamaño (GiB)</th>
+            <th>tg · vacío</th><th>tg · 4k</th><th>tg · 16k</th><th>Caída tg 0→16k</th>
+            <th>pp · vacío</th><th>pp · 16k</th>
+          </tr>
+        </thead>
+        <tbody id="tabla"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div>
+    <p class="legend-help">Tocá un modelo para ocultarlo o mostrarlo en los gráficos.</p>
+    <ul class="legend" id="leyenda"></ul>
+  </div>
+
+  <div class="grid">
+    <section class="card">
+      <h2>Generación según el contexto acumulado</h2>
+      <p class="sub">tok/s al escribir la respuesta. Es lo que se siente al chatear.</p>
+      <div class="chart" id="chart-tg"></div>
+    </section>
+    <section class="card">
+      <h2>Lectura del prompt según el contexto acumulado</h2>
+      <p class="sub">tok/s al procesar lo que se le envía. Pesa en RAG y al pasar archivos. Escala logarítmica.</p>
+      <div class="chart" id="chart-pp"></div>
+    </section>
+  </div>
+
+  <section class="card" id="fa" hidden>
+    <h2>Efecto de flash attention</h2>
+    <p class="note" id="fa-note"></p>
+  </section>
+
+  <details>
+    <summary>Cómo se midió</summary>
+    <p>Cada valor es el promedio de 5 repeticiones de <code>llama-bench</code> con <code>-dev Vulkan1 -ngl 99 -fa on -p 512 -n 128 -d 0,4096,16384</code>, con el modelo completo en la iGPU. Cuando un modelo se midió más de una vez, la tabla y los gráficos muestran el promedio de las corridas.</p>
+    <p>La memoria trabaja en un solo canal (un módulo de 32 GB). Como la generación depende sobre todo del ancho de banda de la RAM, estos números deberían subir de forma notable al agregar un segundo módulo en el otro canal.</p>
+    <p>Los modelos densos (Nemotron-Nano-9B-v2, Qwen2.5-Coder-7B) usan todos sus parámetros en cada token. Los demás son MoE y activan solo una parte, por eso generan más rápido aunque pesen más. Nemotron-3.5-Lightning-30B-A3B se midió y luego se quitó del equipo: su archivo de 23,5 GiB casi llena los 24 GB de memoria de video compartida.</p>
+    <p>Estos números miden velocidad, no la calidad de las respuestas.</p>
+  </details>
+
+  <footer>
+    Datos: <a href="benchmarks/benchmarks.json">benchmarks/benchmarks.json</a> ·
+    Guía, scripts y configuración: <a href="https://github.com/aabenitez/llm-local-hp-805-g9">repositorio en GitHub</a>
+  </footer>
+</main>
+
+<script>
+(() => {
+  const DEPTHS = [0, 4096, 16384];
+  const COLORS = ['#2f6fb7', '#e07b1a', '#d1495b', '#2a9d8f', '#5a9e3c', '#b8960c', '#8e5ea2', '#e377c2', '#8c564b', '#6b7280'];
+  const DASHES = [null, '6 4', '2 3'];
+  const NS = 'http://www.w3.org/2000/svg';
+  const f2 = (v) => v.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const f1 = (v) => v.toLocaleString('es', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  const f0 = (v) => v.toLocaleString('es', { maximumFractionDigits: 0 });
+  const mean = (a) => a.reduce((s, x) => s + x, 0) / a.length;
+  const el = (tag, attrs, text) => {
+    const n = document.createElement(tag);
+    for (const k in attrs || {}) n.setAttribute(k, attrs[k]);
+    if (text != null) n.textContent = text;
+    return n;
+  };
+  const svg = (tag, attrs) => {
+    const n = document.createElementNS(NS, tag);
+    for (const k in attrs || {}) if (attrs[k] != null) n.setAttribute(k, attrs[k]);
+    return n;
+  };
+  const depthLabel = (d) => d === 0 ? 'vacío' : (d / 1024) + 'k';
+
+  let models = [];      // [{name, quant, size, color, dash, tg:{depth:v}, pp:{depth:v}}]
+  const hidden = new Set();
+
+  function prepare(rows) {
+    const on = rows.filter((r) => String(r.flash_attn) === 'on');
+    const names = [];
+    on.forEach((r) => { if (!names.includes(r.model)) names.push(r.model); });
+    models = names.map((name, i) => {
+      const rs = on.filter((r) => r.model === name);
+      const at = (field) => Object.fromEntries(DEPTHS.map((d) => {
+        const v = rs.filter((r) => +r.depth === d).map((r) => +r[field]);
+        return [d, v.length ? mean(v) : null];
+      }));
+      return {
+        name, quant: rs[0].quant, size: +rs[0].size_gib,
+        color: COLORS[i % COLORS.length], dash: DASHES[Math.floor(i / COLORS.length) % DASHES.length],
+        tg: at('tg_tps'), pp: at('pp_tps'),
+      };
+    });
+  }
+
+  function swatch(m) {
+    const s = svg('svg', { width: 22, height: 10, viewBox: '0 0 22 10', 'aria-hidden': 'true' });
+    s.appendChild(svg('line', { x1: 1, y1: 5, x2: 21, y2: 5, stroke: m.color, 'stroke-width': 2.5, 'stroke-dasharray': m.dash, 'stroke-linecap': 'round' }));
+    s.appendChild(svg('circle', { cx: 11, cy: 5, r: 3.5, fill: m.color }));
+    return s;
+  }
+
+  function renderTake() {
+    const p = document.getElementById('take');
+    const ok0 = models.filter((m) => m.tg[0] != null), ok16 = models.filter((m) => m.tg[16384] != null);
+    if (!ok0.length || !ok16.length) { p.textContent = 'No hay mediciones para mostrar.'; return; }
+    const lead0 = ok0.reduce((a, b) => b.tg[0] > a.tg[0] ? b : a);
+    const lead16 = ok16.reduce((a, b) => b.tg[16384] > a.tg[16384] ? b : a);
+    const low16 = ok16.reduce((a, b) => b.tg[16384] < a.tg[16384] ? b : a);
+    p.replaceChildren(
+      'Con contexto vacío genera más rápido ', el('b', null, lead0.name), ' (', el('b', null, f2(lead0.tg[0])), ' tok/s). Con 16k tokens de contexto lidera ',
+      el('b', null, lead16.name), ' (', el('b', null, f2(lead16.tg[16384])), ' tok/s), mientras ', el('b', null, low16.name), ' cae a ', el('b', null, f2(low16.tg[16384])), ' tok/s.'
+    );
+  }
+
+  function renderTable() {
+    const body = document.getElementById('tabla');
+    const sorted = models.slice().sort((a, b) => (b.tg[0] ?? -1) - (a.tg[0] ?? -1));
+    const cols = [
+      (m) => m.tg[0], (m) => m.tg[4096], (m) => m.tg[16384], null, (m) => m.pp[0], (m) => m.pp[16384],
+    ];
+    const best = cols.map((fn) => fn ? Math.max(...models.map((m) => fn(m) ?? -Infinity)) : null);
+    body.replaceChildren(...sorted.map((m) => {
+      const tr = el('tr');
+      const name = el('td');
+      const dot = el('span', { class: 'dot' }); dot.style.background = m.color;
+      name.append(dot, m.name);
+      tr.append(name, el('td', null, m.quant), el('td', null, f2(m.size)));
+      cols.forEach((fn, i) => {
+        if (!fn) {
+          const drop = m.tg[0] && m.tg[16384] != null ? (1 - m.tg[16384] / m.tg[0]) * 100 : null;
+          const td = el('td', null, drop == null ? '—' : f1(drop) + ' %');
+          if (drop != null) td.className = drop >= 50 ? 'bad' : drop >= 25 ? 'warn' : '';
+          tr.appendChild(td);
+          return;
+        }
+        const v = fn(m);
+        const td = el('td', null, v == null ? '—' : f2(v));
+        if (v != null && v === best[i]) td.className = 'ok';
+        tr.appendChild(td);
+      });
+      return tr;
+    }));
+  }
+
+  function renderLegend() {
+    const ul = document.getElementById('leyenda');
+    ul.replaceChildren(...models.map((m) => {
+      const b = el('button', { type: 'button', 'aria-pressed': 'true' });
+      b.append(swatch(m), m.name);
+      b.addEventListener('click', () => {
+        if (hidden.has(m.name)) hidden.delete(m.name); else hidden.add(m.name);
+        b.setAttribute('aria-pressed', String(!hidden.has(m.name)));
+        drawCharts();
+      });
+      const li = el('li'); li.appendChild(b); return li;
+    }));
+  }
+
+  function niceTicks(max, n) {
+    const raw = max / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+    const step = [1, 2, 2.5, 5, 10].map((k) => k * mag).find((s) => s >= raw);
+    const out = []; for (let v = 0; v <= max + 1e-9; v += step) out.push(+v.toFixed(6));
+    return out;
+  }
+
+  function lineChart(host, field, label, log) {
+    host.replaceChildren();
+    const shown = models.filter((m) => !hidden.has(m.name));
+    const vals = shown.flatMap((m) => DEPTHS.map((d) => m[field][d]).filter((v) => v != null));
+    if (!vals.length) { host.appendChild(el('p', { class: 'sub' }, 'No hay modelos seleccionados.')); return; }
+    const W = Math.max(280, host.clientWidth), H = 280, mt = 10, mb = 30, mr = 16;
+    const lo = Math.min(...vals), hi = Math.max(...vals);
+    let ticks, y;
+    if (log) {
+      const a = Math.log(lo * 0.85), b = Math.log(hi * 1.15);
+      y = (v) => H - mb - (Math.log(v) - a) / (b - a) * (H - mb - mt);
+      ticks = [5, 10, 25, 50, 100, 200, 400, 800, 1600, 3200].filter((v) => v >= lo * 0.85 && v <= hi * 1.15);
+      if (ticks.length < 2) ticks = [lo, hi];
+    } else {
+      ticks = niceTicks(hi * 1.08, 5);
+      const top = ticks[ticks.length - 1];
+      y = (v) => H - mb - v / top * (H - mb - mt);
+    }
+    const ml = 14 + Math.max(...ticks.map((t) => f0(t).length)) * 7.2;
+    const x = (i) => ml + 18 + i * (W - ml - mr - 36) / (DEPTHS.length - 1);
+    const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `${label} de cada modelo con 0, 4k y 16k tokens de contexto` });
+    ticks.forEach((t) => {
+      root.appendChild(svg('line', { class: 'gridline', x1: ml, x2: W - mr, y1: y(t), y2: y(t) }));
+      const tx = svg('text', { x: ml - 8, y: y(t) + 4, 'text-anchor': 'end' }); tx.textContent = f0(t); root.appendChild(tx);
+    });
+    DEPTHS.forEach((d, i) => {
+      const tx = svg('text', { x: x(i), y: H - 8, 'text-anchor': 'middle' }); tx.textContent = depthLabel(d); root.appendChild(tx);
+    });
+    const tip = el('div', { class: 'tip' }); tip.hidden = true;
+    const showTip = (m, d, i) => {
+      tip.replaceChildren(el('div', null, m.name),
+        el('div', { class: 'm' }, d === 0 ? 'contexto vacío' : depthLabel(d) + ' de contexto'),
+        el('div', { class: 'v' }, f2(m[field][d]) + ' tok/s'));
+      tip.hidden = false;
+      const k = host.clientWidth / W, tw = tip.offsetWidth;
+      let left = x(i) * k + 12; if (left + tw > host.clientWidth) left = x(i) * k - tw - 12;
+      tip.style.left = Math.max(0, left) + 'px';
+      tip.style.top = Math.max(0, y(m[field][d]) * k - 24) + 'px';
+    };
+    shown.forEach((m) => {
+      const pts = DEPTHS.map((d, i) => [d, i, m[field][d]]).filter((p) => p[2] != null);
+      root.appendChild(svg('path', {
+        d: pts.map((p, j) => (j ? 'L' : 'M') + x(p[1]).toFixed(1) + ' ' + y(p[2]).toFixed(1)).join(' '),
+        fill: 'none', stroke: m.color, 'stroke-width': 2.25, 'stroke-dasharray': m.dash, 'stroke-linejoin': 'round', 'stroke-linecap': 'round',
+      }));
+    });
+    // points on top, with a larger invisible hit area for touch
+    shown.forEach((m) => {
+      DEPTHS.forEach((d, i) => {
+        const v = m[field][d]; if (v == null) return;
+        root.appendChild(svg('circle', { cx: x(i), cy: y(v), r: 4, fill: m.color, stroke: 'var(--panel)', 'stroke-width': 1.5 }));
+        const hit = svg('circle', { cx: x(i), cy: y(v), r: 11, fill: 'transparent', tabindex: 0, 'aria-label': `${m.name}, ${depthLabel(d)}: ${f2(v)} tok/s` });
+        hit.addEventListener('pointerenter', () => showTip(m, d, i));
+        hit.addEventListener('pointerdown', () => showTip(m, d, i));
+        hit.addEventListener('focus', () => showTip(m, d, i));
+        hit.addEventListener('pointerleave', () => { tip.hidden = true; });
+        hit.addEventListener('blur', () => { tip.hidden = true; });
+        root.appendChild(hit);
+      });
+    });
+    host.append(root, tip);
+  }
+
+  function drawCharts() {
+    lineChart(document.getElementById('chart-tg'), 'tg', 'Generación en tok/s', false);
+    lineChart(document.getElementById('chart-pp'), 'pp', 'Lectura del prompt en tok/s, en escala logarítmica', true);
+  }
+
+  function renderFlash(rows) {
+    const off = rows.filter((r) => String(r.flash_attn) === 'off' && +r.depth === 0);
+    if (!off.length) return;
+    const o = off[0];
+    const on = rows.find((r) => r.model === o.model && String(r.flash_attn) === 'on' && +r.depth === 0);
+    if (!on) return;
+    document.getElementById('fa-note').replaceChildren(
+      'En ' + o.model + ' con contexto vacío, activarlo subió la lectura del prompt de ', el('b', null, f2(+o.pp_tps)), ' a ', el('b', null, f2(+on.pp_tps)),
+      ' tok/s y la generación de ', el('b', null, f2(+o.tg_tps)), ' a ', el('b', null, f2(+on.tg_tps)), ' tok/s. Todas las demás mediciones se hicieron con flash attention activado.');
+    document.getElementById('fa').hidden = false;
+  }
+
+  function renderDates(rows) {
+    const ds = Array.from(new Set(rows.map((r) => r.date).filter(Boolean))).sort();
+    if (!ds.length) return;
+    const fmt = (s) => new Date(s + 'T00:00:00Z').toLocaleDateString('es', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' });
+    document.getElementById('fechas').textContent = ds.length === 1 ? fmt(ds[0]) : fmt(ds[0]) + ' – ' + fmt(ds[ds.length - 1]);
+  }
+
+  fetch('benchmarks/benchmarks.json', { cache: 'no-cache' })
+    .then((r) => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then((rows) => {
+      prepare(rows);
+      renderTake(); renderTable(); renderLegend(); renderFlash(rows); renderDates(rows); drawCharts();
+      let t; const redraw = () => { clearTimeout(t); t = setTimeout(drawCharts, 80); };
+      if ('ResizeObserver' in window) {
+        let w = 0;
+        new ResizeObserver((es) => { const nw = Math.round(es[0].contentRect.width); if (nw !== w) { w = nw; redraw(); } }).observe(document.getElementById('chart-tg'));
+      } else window.addEventListener('resize', redraw);
+    })
+    .catch((e) => {
+      const p = document.getElementById('take');
+      p.className = 'take error';
+      p.textContent = 'No se pudieron cargar los resultados (' + e.message + ').';
+    });
+})();
+</script>
+</body>
+</html>

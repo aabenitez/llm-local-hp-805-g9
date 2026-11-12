@@ -89,6 +89,7 @@ tabla de más abajo corresponden a la versión indicada.
 | `descargar-modelos.bat` | Igual que `descargar-modelos.sh`, para Windows |
 | `qwen.sh`, `gptoss.sh` | Scripts anteriores que levantan un solo modelo. Quedaron reemplazados por `modelos.sh` |
 | `benchmarks/benchmarks.json` | Resultados de `llama-bench` de todos los modelos medidos |
+| `index.html` | Página con la tabla y los gráficos de los benchmarks (GitHub Pages) |
 | `README.md` | Este documento |
 
 Los modelos no están en esta carpeta. Se guardan en la caché de Hugging Face:
@@ -270,6 +271,10 @@ o en una cuantización más chica.
 
 Los datos completos, con desvío estándar y fecha de cada medición, están en
 `benchmarks/benchmarks.json`.
+
+Los gráficos interactivos están en
+<https://aabenitez.github.io/llm-local-hp-805-g9/>. La página lee ese mismo
+archivo, así que se actualiza sola al agregar mediciones.
 
 ### Qué se aprendió
 
